@@ -1,0 +1,5 @@
+MetaTrader5>=5.0.5735
+PyQt5>=5.15.11
+pyqtgraph>=0.14.0
+pandas>=3.0.3
+numpy>=2.4.6

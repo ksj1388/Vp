@@ -1,0 +1,233 @@
+// ============================================================================
+// ULTIMATE ORDER BLOCK DETECTOR - Pine Script v5
+// Complete implementation: Swing Points + BOS + Order Block Box Drawing
+// ============================================================================
+// This is the standard SMC order block detection logic used by most
+// TradingView indicators (including AlgoMan-style tools).
+// ============================================================================
+
+//@version=5
+indicator("Ultimate Order Block Detector", overlay=true, max_boxes_count=500, max_labels_count=500, max_lines_count=500)
+
+// ──────────────────────────────────────────────────────────────────────────────
+// INPUTS
+// ──────────────────────────────────────────────────────────────────────────────
+swingLen         = input.int(5, "Swing Detection Length", minval=2, maxval=50)
+showBullOB       = input.bool(true, "Show Bullish Order Blocks")
+showBearOB       = input.bool(true, "Show Bearish Order Blocks")
+showBOS          = input.bool(true, "Show BOS Labels")
+bullOBColor      = input.color(color.new(#089981, 80), "Bullish OB Color")
+bearOBColor      = input.color(color.new(#f23645, 80), "Bearish OB Color")
+bullOBBorder     = input.color(color.new(#089981, 30), "Bullish OB Border")
+bearOBBorder     = input.color(color.new(#f23645, 30), "Bearish OB Border")
+maxOBCount       = input.int(50, "Max Order Blocks Displayed", minval=5, maxval=200)
+extendOB         = input.bool(true, "Extend OB to Right")
+mitigatedColor   = input.color(color.new(color.gray, 90), "Mitigated OB Color")
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SECTION 1: SWING POINT DETECTION
+// ──────────────────────────────────────────────────────────────────────────────
+// Swing highs: bar_index where high[i] is the highest high
+// for (swingLen) bars to left AND (swingLen) bars to right.
+// Swing lows: bar_index where low[i] is the lowest low
+// for (swingLen) bars to left AND (swingLen) bars to right.
+//
+// We use barstate.isconfirmed to only confirm swings on closed bars,
+// preventing repainting.
+
+var float swingHighPrice  = na
+var int   swingHighBar    = na
+var float swingLowPrice   = na
+var int   swingLowBar     = na
+
+isSwingHigh = ta.pivothigh(high, swingLen, swingLen)
+isSwingLow  = ta.pivotlow(low, swingLen, swingLen)
+
+// Confirmed swing high detected
+if not na(isSwingHigh) and barstate.isconfirmed
+    swingHighPrice := isSwingHigh
+    swingHighBar   := bar_index - swingLen
+
+// Confirmed swing low detected
+if not na(isSwingLow) and barstate.isconfirmed
+    swingLowPrice := isSwingLow
+    swingLowBar   := bar_index - swingLen
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SECTION 2: BREAK OF STRUCTURE (BOS) DETECTION
+// ──────────────────────────────────────────────────────────────────────────────
+// BOS occurs when price breaks a previous swing high (bullish BOS)
+// or breaks a previous swing low (bearish BOS).
+//
+// Bullish BOS: close breaks above the most recent swing high
+// Bearish BOS: close breaks below the most recent swing low
+//
+// BOS = trend continuation. The opposite is CHoCH (Change of Character)
+// which signals reversal. This code focuses on BOS for OB creation.
+
+var int   structureDirection = 0   // 1 = bullish, -1 = bearish
+var float lastBOSPrice       = na
+var int   lastBOSBar         = na
+
+bullishBOS = false
+bearishBOS = false
+
+// Bullish BOS: price closes above last swing high
+if not na(swingHighPrice) and close > swingHighPrice and barstate.isconfirmed
+    if structureDirection != 1
+        bullishBOS    := true
+        lastBOSPrice  := swingHighPrice
+        lastBOSBar    := bar_index
+        structureDirection := 1
+
+// Bearish BOS: price closes below last swing low
+if not na(swingLowPrice) and close < swingLowPrice and barstate.isconfirmed
+    if structureDirection != -1
+        bearishBOS    := true
+        lastBOSPrice  := swingLowPrice
+        lastBOSBar    := bar_index
+        structureDirection := -1
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SECTION 3: ORDER BLOCK DETECTION
+// ──────────────────────────────────────────────────────────────────────────────
+// Order Block = the last OPPOSING candle before the impulsive move that
+// caused the BOS.
+//
+// Bullish OB: When bullish BOS occurs, look back to find the last bearish
+// (down) candle before the impulsive move up. The OB zone = that candle's
+// low to high (or body).
+//
+// Bearish OB: When bearish BOS occurs, look back to find the last bullish
+// (up) candle before the impulsive move down. The OB zone = that candle's
+// high to low (or body).
+//
+// The OB is drawn as a box extending to the right until price mitigates it
+// (returns and trades through the zone).
+
+var box[] bullBoxes = array.new_box()
+var box[] bearBoxes = array.new_box()
+var int[] bullBoxBars = array.new_int()
+var int[] bearBoxBars = array.new_int()
+var bool[] bullBoxMitigated = array.new_bool()
+var bool[] bearBoxMitigated = array.new_bool()
+
+findLastOpposingCandle(bullishMove) =>
+    // Search backwards from current bar to find the last opposing candle
+    // before the impulse move that triggered BOS
+    float obHigh = na
+    float obLow  = na
+    int   obBar  = na
+    int   limit  = math.min(bar_index, 50)
+    for i = 2 to limit
+        if bullishMove
+            // Bullish OB: last bearish candle (close < open) before the move up
+            if close[i] < open[i]
+                obHigh := high[i]
+                obLow  := low[i]
+                obBar  := bar_index - i
+                break
+        else
+            // Bearish OB: last bullish candle (close > open) before the move down
+            if close[i] > open[i]
+                obHigh := high[i]
+                obLow  := low[i]
+                obBar  := bar_index - i
+                break
+    [obHigh, obLow, obBar]
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SECTION 4: CREATE ORDER BLOCK BOXES ON BOS
+// ──────────────────────────────────────────────────────────────────────────────
+
+if bullishBOS and showBullOB
+    [obHigh, obLow, obBar] = findLastOpposingCandle(true)
+    if not na(obHigh) and not na(obLow) and not na(obBar)
+        int rightExtend = extendOB ? bar_index + 100 : obBar + 20
+        newBox = box.new(obBar, obHigh, rightExtend, obLow,
+                         border_color=bullOBBorder, bgcolor=bullOBColor,
+                         border_width=1, border_style=line.style_solid)
+        array.push(bullBoxes, newBox)
+        array.push(bullBoxBars, obBar)
+        array.push(bullBoxMitigated, false)
+        // Keep only maxOBCount boxes
+        if array.size(bullBoxes) > maxOBCount
+            box.delete(array.shift(bullBoxes))
+            array.shift(bullBoxBars)
+            array.shift(bullBoxMitigated)
+
+if bearishBOS and showBearOB
+    [obHigh, obLow, obBar] = findLastOpposingCandle(false)
+    if not na(obHigh) and not na(obLow) and not na(obBar)
+        int rightExtend = extendOB ? bar_index + 100 : obBar + 20
+        newBox = box.new(obBar, obHigh, rightExtend, obLow,
+                         border_color=bearOBBorder, bgcolor=bearOBColor,
+                         border_width=1, border_style=line.style_solid)
+        array.push(bearBoxes, newBox)
+        array.push(fearBoxBars, obBar)
+        array.push(fearBoxMitigated, false)
+        if array.size(bearBoxes) > maxOBCount
+            box.delete(array.shift(bearBoxes))
+            array.shift(fearBoxBars)
+            array.shift(fearBoxMitigated)
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SECTION 5: BOS LABELS & LINES
+// ──────────────────────────────────────────────────────────────────────────────
+
+if bullishBOS and showBOS
+    label.new(bar_index - swingLen, swingHighPrice, "BOS",
+              color=color.new(color.green, 80), textcolor=color.green,
+              style=label.style_label_down, size=size.small)
+    line.new(bar_index - swingLen, swingHighPrice, bar_index, swingHighPrice,
+             color=color.new(color.green, 50), style=line.style_dashed, width=1)
+
+if bearishBOS and showBOS
+    label.new(bar_index - swingLen, swingLowPrice, "BOS",
+              color=color.new(color.red, 80), textcolor=color.red,
+              style=label.style_label_up, size=size.small)
+    line.new(bar_index - swingLen, swingLowPrice, bar_index, swingLowPrice,
+             color=color.new(color.red, 50), style=line.style_dashed, width=1)
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SECTION 6: MITIGATION DETECTION (OB INVALIDATION)
+// ──────────────────────────────────────────────────────────────────────────────
+// A bullish OB is "mitigated" when price trades back down through it (close < obLow)
+// A bearish OB is "mitigated" when price trades back up through it (close > obHigh)
+
+if array.size(bullBoxes) > 0
+    for i = array.size(bullBoxes) - 1 to 0
+        if not array.get(bullBoxMitigated, i)
+            bx = array.get(bullBoxes, i)
+            bxTop = box.get_top(bx)
+            bxBot = box.get_bottom(bx)
+            // Bullish OB mitigated: price closes below the OB low
+            if close < bxBot
+                array.set(bullBoxMitigated, i, true)
+                box.set_bgcolor(bx, mitigatedColor)
+                box.set_border_color(bx, color.new(color.gray, 60))
+
+if array.size(bearBoxes) > 0
+    for i = array.size(bearBoxes) - 1 to 0
+        if not array.get(bearBoxMitigated, i)
+            bx = array.get(bearBoxes, i)
+            bxTop = box.get_top(bx)
+            bxBot = box.get_bottom(bx)
+            // Bearish OB mitigated: price closes above the OB high
+            if close > bxTop
+                array.set(bearBoxMitigated, i, true)
+                box.set_bgcolor(bx, mitigatedColor)
+                box.set_border_color(bx, color.new(color.gray, 60))
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SECTION 7: SWING POINT VISUALIZATION (OPTIONAL)
+// ──────────────────────────────────────────────────────────────────────────────
+
+plotshape(not na(isSwingHigh), "Swing High", shape.triangledown,
+          location.abovebar, color.new(color.red, 40), offset=-swingLen)
+plotshape(not na(isSwingLow), "Swing Low", shape.triangleup,
+          location.belowbar, color.new(color.green, 40), offset=-swingLen)
+
+// ============================================================================
+// END OF ORDER BLOCK DETECTION
+// ============================================================================
