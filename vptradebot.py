@@ -941,12 +941,30 @@ class MT5Executor:
             result = mt5.order_send(request)
             if result is not None and result.retcode == mt5.TRADE_RETCODE_DONE:
                 self._notify_trade()
+                if not getattr(self, '_partial_done', set()) or ticket not in self._partial_done:
+                    if not hasattr(self, '_partial_done'):
+                        self._partial_done = set()
+                    self._partial_done.add(ticket)
+                    try:
+                        self.modify_position(ticket, sl=pos.price_open)
+                        Logger.success(f"[Partial] #{ticket} SL moved to entry {pos.price_open}")
+                    except Exception as e:
+                        Logger.error(f"[Partial] #{ticket} SL to entry failed: {e}")
                 return result, "OK"
         if result is not None and result.retcode == 10030:
             request.pop("type_filling", None)
             result = mt5.order_send(request)
             if result is not None and result.retcode == mt5.TRADE_RETCODE_DONE:
                 self._notify_trade()
+                if not hasattr(self, '_partial_done'):
+                    self._partial_done = set()
+                if ticket not in self._partial_done:
+                    self._partial_done.add(ticket)
+                    try:
+                        self.modify_position(ticket, sl=pos.price_open)
+                        Logger.success(f"[Partial] #{ticket} SL moved to entry {pos.price_open}")
+                    except Exception as e:
+                        Logger.error(f"[Partial] #{ticket} SL to entry failed: {e}")
                 return result, "OK"
         if result is None:
             return None, "order_send returned None"

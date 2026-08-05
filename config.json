@@ -6,7 +6,7 @@
     "AUDCHF."
   ],
   "settings": {
-    "last_symbol": "BTCUSD.",
+    "last_symbol": "AUDUSD.",
     "last_tf": "M1",
     "risk_mode": 1,
     "risk_value": 7.0,
@@ -33,7 +33,7 @@
       "ichimoku_show_base": false,
       "ichimoku_show_lead1": false,
       "ichimoku_show_lead2": false,
-      "ichimoku_show_cloud": false,
+      "ichimoku_show_cloud": true,
       "ichimoku_conv_color": "#2962FF",
       "ichimoku_base_color": "#B71C1C",
       "ichimoku_lag_color": "#43A047",
@@ -145,7 +145,7 @@
       "levelNum": 100,
       "levelWidth": 50
     },
-    "vwap_enabled": true,
+    "vwap_enabled": false,
     "vwap_cfg": {
       "use_ses": false,
       "use_wk": false,
@@ -236,7 +236,7 @@
         "M30": false
       },
       "popup_notify": true,
-      "sound_alarm": false
+      "sound_alarm": true
     },
     "max_positions": 11,
     "max_per_symbol": 1,
@@ -257,6 +257,7 @@
     "USDCHF.": 3,
     "AUDUSD.": 2,
     "GBPCHF.": 3,
-    "EURGBP.": 2
+    "EURGBP.": 2,
+    "EURAUD.": 3
   }
 }
