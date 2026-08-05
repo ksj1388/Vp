@@ -6471,6 +6471,9 @@ class ChartWidget(QWidget):
     def _refresh_trade_positions(self):
         if self.trade_panel is not None and self.trade_panel.isVisible():
             self.trade_panel.refresh_positions()
+        mw = self.window()
+        if mw and hasattr(mw, 'positions_panel'):
+            mw.positions_panel.refresh()
         if hasattr(self, 'exit_mgr'):
             sp = self.window().findChild(StrategyPanel)
             if sp:
