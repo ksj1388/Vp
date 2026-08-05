@@ -3879,6 +3879,7 @@ class ChartWidget(QWidget):
         self._last_signal_score = 0.0
 
         self._pos_lines = []
+        self._pos_sl_cache = {}  # ticket -> sl_distance (original)
         self._trendline_mode = False
         self._trendline_points = []
         self._trendline_items = []
@@ -5881,6 +5882,8 @@ class ChartWidget(QWidget):
                     "volume": pos.volume, "x_start": x_start, "x_end": n - 1,
                     "symbol": pos.symbol, "digits": info.digits if info else 5,
                 })
+                if sl and sl > 0 and pos.ticket not in self._pos_sl_cache:
+                    self._pos_sl_cache[pos.ticket] = abs(entry - sl)
 
         orders = mt5.orders_get()
         if orders:
@@ -5912,6 +5915,9 @@ class ChartWidget(QWidget):
                     "entry": entry, "sl": sl, "tp": tp,
                     "volume": o.volume_current, "x_start": x_start, "x_end": n - 1,
                 })
+
+        active_pos_tickets = {item["ticket"] for item in items_to_draw if item["type"] == "POS"}
+        self._pos_sl_cache = {t: d for t, d in self._pos_sl_cache.items() if t in active_pos_tickets}
 
         for item in items_to_draw:
             entry = item["entry"]
@@ -6030,7 +6036,12 @@ class ChartWidget(QWidget):
                     self._pos_lines.append(sl_rect)
 
                 if tp and tp > 0:
-                    sl_dist_pos = abs(entry - sl) if sl and sl > 0 else abs(tp - entry)
+                    cached_sl_dist = self._pos_sl_cache.get(item["ticket"])
+                    if cached_sl_dist and cached_sl_dist > 0:
+                        sl_dist_pos = cached_sl_dist
+                    else:
+                        sl_dist_pos = abs(entry - sl) if sl and sl > 0 else abs(tp - entry)
+                        self._pos_sl_cache[item["ticket"]] = sl_dist_pos
                     tp_ratio_pos = abs(tp - entry) / sl_dist_pos if sl_dist_pos > 0 else 0
                     ratios_pos = [r for r in self._get_tp_levels_from_config() if r <= tp_ratio_pos]
                     is_buy_pos = item["side_txt"] == "BUY"
