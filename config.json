@@ -6,7 +6,7 @@
     "AUDCHF."
   ],
   "settings": {
-    "last_symbol": "BTCUSD.",
+    "last_symbol": "BRNUSD.",
     "last_tf": "M3",
     "risk_mode": 1,
     "risk_value": 7.0,
@@ -249,7 +249,7 @@
         0
       ],
       "main": [
-        634,
+        358,
         0
       ]
     },
@@ -266,6 +266,7 @@
     "USDCHF.": 3,
     "AUDUSD.": 2,
     "EURGBP.": 2,
-    "GBPUSD.": 2
+    "GBPUSD.": 2,
+    "NZDUSD.": 3
   }
 }

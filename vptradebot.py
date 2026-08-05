@@ -5722,34 +5722,18 @@ class ChartWidget(QWidget):
         self._is_fullscreen = not self._is_fullscreen
         ms = mw.middle_splitter
         vs = mw.main_splitter
-        sp = mw.strategy_panel
-        wp = mw.watchlist_panel
-        bt = mw.bottom_tabs
         if self._is_fullscreen:
-            self._saved_geom = mw.saveGeometry()
             self._saved_sizes = ms.sizes()
             self._saved_vsize = vs.sizes()
-            sp.hide()
-            wp.hide()
-            bt.hide()
-            mw.showMaximized()
+            ms.setSizes([0, 1, 0])
+            vs.setSizes([1, 0])
             self._fullscreen_btn.setText("⛶")
             self._fullscreen_btn.setToolTip("Exit Fullscreen")
         else:
-            sp.show()
-            wp.show()
-            bt.show()
-            if hasattr(self, '_saved_geom'):
-                mw.restoreGeometry(self._saved_geom)
-                mw.showNormal()
-            saved_s = getattr(self, '_saved_sizes', None)
-            saved_v = getattr(self, '_saved_vsize', None)
-            def _restore_splitters():
-                if saved_s:
-                    ms.setSizes(saved_s)
-                if saved_v:
-                    vs.setSizes(saved_v)
-            QtCore.QTimer.singleShot(50, _restore_splitters)
+            if hasattr(self, '_saved_sizes'):
+                ms.setSizes(self._saved_sizes)
+            if hasattr(self, '_saved_vsize'):
+                vs.setSizes(self._saved_vsize)
             self._fullscreen_btn.setText("⛶")
             self._fullscreen_btn.setToolTip("Toggle Fullscreen")
 
