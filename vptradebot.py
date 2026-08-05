@@ -1790,6 +1790,12 @@ class IchimokuCloudIndicator:
         self.lead52_periods = cfg.get("ichimoku_lead52_periods", 52)
         self.lead52_color = cfg.get("ichimoku_lead52_color", "#FFD700")
         self.show_lead52 = cfg.get("ichimoku_show_lead52", True)
+        self.conv_width = cfg.get("ichimoku_conv_width", 1.5)
+        self.base_width = cfg.get("ichimoku_base_width", 1.5)
+        self.lag_width = cfg.get("ichimoku_lag_width", 1.0)
+        self.lead1_width = cfg.get("ichimoku_lead1_width", 1.0)
+        self.lead2_width = cfg.get("ichimoku_lead2_width", 1.0)
+        self.lead52_width = cfg.get("ichimoku_lead52_width", 1.5)
 
     def get_config(self):
         return {
@@ -1813,6 +1819,12 @@ class IchimokuCloudIndicator:
             "ichimoku_lead52_periods": self.lead52_periods,
             "ichimoku_lead52_color": self.lead52_color,
             "ichimoku_show_lead52": self.show_lead52,
+            "ichimoku_conv_width": self.conv_width,
+            "ichimoku_base_width": self.base_width,
+            "ichimoku_lag_width": self.lag_width,
+            "ichimoku_lead1_width": self.lead1_width,
+            "ichimoku_lead2_width": self.lead2_width,
+            "ichimoku_lead52_width": self.lead52_width,
         }
 
     def clear(self):
@@ -1883,11 +1895,11 @@ class IchimokuCloudIndicator:
         self._disp = disp
         self._n = n
 
-        pen_conv = pg.mkPen(self.conv_color, width=1.5)
-        pen_base = pg.mkPen(self.base_color, width=1.5)
-        pen_lag = pg.mkPen(self.lag_color, width=1)
-        pen_lead1 = pg.mkPen(self.lead1_color, width=1)
-        pen_lead2 = pg.mkPen(self.lead2_color, width=1)
+        pen_conv = pg.mkPen(self.conv_color, width=self.conv_width)
+        pen_base = pg.mkPen(self.base_color, width=self.base_width)
+        pen_lag = pg.mkPen(self.lag_color, width=self.lag_width)
+        pen_lead1 = pg.mkPen(self.lead1_color, width=self.lead1_width)
+        pen_lead2 = pg.mkPen(self.lead2_color, width=self.lead2_width)
 
         if self.show_conversion:
             conv_plot = pg.PlotDataItem()
@@ -1927,7 +1939,7 @@ class IchimokuCloudIndicator:
             self._drawn.append(lead2_plot)
 
         if self.show_lead52:
-            pen_lead52 = pg.mkPen(self.lead52_color, width=1.5)
+            pen_lead52 = pg.mkPen(self.lead52_color, width=self.lead52_width)
             lead52_plot = pg.PlotDataItem()
             lead52_plot.setData(x_arr, lead52, pen=pen_lead52)
             lead52_plot.setZValue(10)
@@ -4271,6 +4283,24 @@ class ChartWidget(QWidget):
             return
         if hasattr(sp, 'ichimoku_cfg'):
             self._ichimoku_indicator.set_config(sp.ichimoku_cfg)
+        bg_color = "#0a0a1a"
+        try:
+            bg_brush = self.candle_plot.backgroundBrush()
+            if bg_brush.style() != QtCore.Qt.NoBrush:
+                bg_color = bg_brush.color().name()
+        except Exception:
+            pass
+        try:
+            r = int(bg_color[1:3], 16)
+            g = int(bg_color[3:5], 16)
+            b = int(bg_color[5:7], 16)
+            luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        except Exception:
+            luminance = 30
+        if luminance < 80:
+            self._ichimoku_indicator.lead52_color = "#ffffff"
+        else:
+            self._ichimoku_indicator.lead52_color = "#1a1b26"
         df = self.data_df
         opens = df["open"].values.astype(float)
         highs = df["high"].values.astype(float)
@@ -5611,6 +5641,9 @@ class ChartWidget(QWidget):
                 f"QPushButton{{background:#24283b;border:1px solid #292e42;border-radius:6px;font-size:16px;color:{hex_c};padding:2px}}"
                 "QPushButton:hover{background:#292e42;border-color:#7aa2f7}"
             )
+            sp = self.window().findChild(StrategyPanel)
+            if sp and sp.ichimoku_cb.isChecked():
+                self._update_ichimoku()
 
     def _save_bg_color(self, hex_c):
         try:
@@ -6663,8 +6696,19 @@ class IchimokuSettingsDialog(QtWidgets.QDialog):
         super().__init__(parent)
         self.setWindowTitle("Ichimoku Cloud Settings")
         self.setMinimumWidth(320)
+        self.setMinimumHeight(400)
+        self.setMaximumHeight(600)
         self.setStyleSheet("QDialog{background:#0a0a1a;color:#c0caf5} QLabel{color:#c0caf5;font-size:10px} QSpinBox,QDoubleSpinBox,QComboBox{background:#1a1b26;color:#c0caf5;border:1px solid #292e42;border-radius:4px;font-size:10px;padding:2px 4px} QCheckBox{color:#c0caf5;font-size:10px} QPushButton{background:#1a1b26;color:#7aa2f7;border:1px solid #292e42;border-radius:4px;padding:4px 12px;font-size:10px} QPushButton:hover{background:#292e42}")
-        layout = QVBoxLayout(self)
+        main_layout = QVBoxLayout(self)
+        main_layout.setSpacing(6)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        scroll = QtWidgets.QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        scroll.setStyleSheet("QScrollArea{background:#0a0a1a;border:none}")
+        content = QtWidgets.QWidget()
+        content.setStyleSheet("background:#0a0a1a")
+        layout = QVBoxLayout(content)
         layout.setSpacing(6)
         sp = parent if isinstance(parent, StrategyPanel) else None
         cfg = sp.ichimoku_cfg if sp else {}
@@ -6789,6 +6833,42 @@ class IchimokuSettingsDialog(QtWidgets.QDialog):
 
         layout.addWidget(ga)
 
+        gw = QGroupBox("Line Widths")
+        gw.setStyleSheet("QGroupBox{color:#e0af68;font-weight:bold;border:1px solid #292e42;border-radius:6px;margin-top:6px;padding-top:8px} QGroupBox::title{subcontrol-origin:margin;left:6px;padding:0 3px}")
+        gwl = QGridLayout(gw); gwl.setSpacing(4)
+
+        gwl.addWidget(QLabel("Conversion:"), 0, 0)
+        self.conv_width = QtWidgets.QDoubleSpinBox(); self.conv_width.setRange(0.5, 5.0); self.conv_width.setSingleStep(0.5)
+        self.conv_width.setValue(cfg.get("ichimoku_conv_width", 1.5)); self.conv_width.setFixedWidth(60)
+        gwl.addWidget(self.conv_width, 0, 1)
+
+        gwl.addWidget(QLabel("Base:"), 0, 2)
+        self.base_width = QtWidgets.QDoubleSpinBox(); self.base_width.setRange(0.5, 5.0); self.base_width.setSingleStep(0.5)
+        self.base_width.setValue(cfg.get("ichimoku_base_width", 1.5)); self.base_width.setFixedWidth(60)
+        gwl.addWidget(self.base_width, 0, 3)
+
+        gwl.addWidget(QLabel("Lagging:"), 1, 0)
+        self.lag_width = QtWidgets.QDoubleSpinBox(); self.lag_width.setRange(0.5, 5.0); self.lag_width.setSingleStep(0.5)
+        self.lag_width.setValue(cfg.get("ichimoku_lag_width", 1.0)); self.lag_width.setFixedWidth(60)
+        gwl.addWidget(self.lag_width, 1, 1)
+
+        gwl.addWidget(QLabel("Lead 1:"), 1, 2)
+        self.lead1_width = QtWidgets.QDoubleSpinBox(); self.lead1_width.setRange(0.5, 5.0); self.lead1_width.setSingleStep(0.5)
+        self.lead1_width.setValue(cfg.get("ichimoku_lead1_width", 1.0)); self.lead1_width.setFixedWidth(60)
+        gwl.addWidget(self.lead1_width, 1, 3)
+
+        gwl.addWidget(QLabel("Lead 2:"), 2, 0)
+        self.lead2_width = QtWidgets.QDoubleSpinBox(); self.lead2_width.setRange(0.5, 5.0); self.lead2_width.setSingleStep(0.5)
+        self.lead2_width.setValue(cfg.get("ichimoku_lead2_width", 1.0)); self.lead2_width.setFixedWidth(60)
+        gwl.addWidget(self.lead2_width, 2, 1)
+
+        gwl.addWidget(QLabel("Lead 52:"), 2, 2)
+        self.lead52_width = QtWidgets.QDoubleSpinBox(); self.lead52_width.setRange(0.5, 5.0); self.lead52_width.setSingleStep(0.5)
+        self.lead52_width.setValue(cfg.get("ichimoku_lead52_width", 1.5)); self.lead52_width.setFixedWidth(60)
+        gwl.addWidget(self.lead52_width, 2, 3)
+
+        layout.addWidget(gw)
+
         btn_layout = QHBoxLayout()
         btn_ok = QPushButton("OK")
         btn_ok.clicked.connect(self.accept)
@@ -6797,6 +6877,9 @@ class IchimokuSettingsDialog(QtWidgets.QDialog):
         btn_cancel.clicked.connect(self.reject)
         btn_layout.addWidget(btn_cancel)
         layout.addLayout(btn_layout)
+
+        scroll.setWidget(content)
+        main_layout.addWidget(scroll)
 
     def get_settings(self):
         return {
@@ -6822,6 +6905,12 @@ class IchimokuSettingsDialog(QtWidgets.QDialog):
             "ichimoku_show_lead52": self.show_lead52.isChecked(),
             "ichimoku_lead52_periods": self.lead52_periods.value(),
             "ichimoku_lead52_color": self.lead52_color.text(),
+            "ichimoku_conv_width": self.conv_width.value(),
+            "ichimoku_base_width": self.base_width.value(),
+            "ichimoku_lag_width": self.lag_width.value(),
+            "ichimoku_lead1_width": self.lead1_width.value(),
+            "ichimoku_lead2_width": self.lead2_width.value(),
+            "ichimoku_lead52_width": self.lead52_width.value(),
         }
 
 # ============================================================
@@ -9679,6 +9768,11 @@ class MainWindow(QMainWindow):
 
     def setup_connections(self):
         self.strategy_panel.ms_scan_cb.toggled.connect(self._toggle_multi_scan)
+        self._ms_refresh_timer = QTimer()
+        self._ms_refresh_timer.timeout.connect(self._refresh_ms_symbols)
+        self._ms_refresh_timer.start(15000)
+        if self.strategy_panel.ms_scan_cb.isChecked():
+            QTimer.singleShot(3000, lambda: self._toggle_multi_scan(True))
 
     def _restore_chart_state(self):
         try:
