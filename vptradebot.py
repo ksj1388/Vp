@@ -4109,16 +4109,19 @@ class ChartWidget(QWidget):
         self.candle_plot.addItem(self.crosshair_label, ignoreBounds=True)
 
         self._is_fullscreen = False
-        self._fullscreen_btn = QPushButton("⛶", self.candle_plot)
+        self._fullscreen_btn = QPushButton("⛶", self)
         self._fullscreen_btn.setFixedSize(28, 28)
         self._fullscreen_btn.setToolTip("Toggle Fullscreen")
         self._fullscreen_btn.setStyleSheet(
-            "QPushButton{background:rgba(26,27,38,120);color:#565f89;border:1px solid rgba(41,46,66,80);"
+            "QPushButton{background:rgba(26,27,38,180);color:#565f89;border:1px solid rgba(41,46,66,100);"
             "border-radius:6px;font-size:16px;padding:2px}"
-            "QPushButton:hover{background:rgba(41,46,66,200);color:#7aa2f7;border-color:#7aa2f7}"
+            "QPushButton:hover{background:rgba(41,46,66,220);color:#7aa2f7;border-color:#7aa2f7}"
         )
         self._fullscreen_btn.clicked.connect(self._toggle_fullscreen)
         self._fullscreen_btn.raise_()
+        self._fs_timer = QTimer()
+        self._fs_timer.timeout.connect(lambda: self._fullscreen_btn.raise_())
+        self._fs_timer.start(500)
 
         self._trade_lines_setup()
         self._ichimoku_indicator = IchimokuCloudIndicator(self.candle_plot)
@@ -5736,9 +5739,10 @@ class ChartWidget(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        if hasattr(self, '_fullscreen_btn'):
-            w = self.candle_plot.width()
-            self._fullscreen_btn.move(w - 34, 4)
+        if hasattr(self, '_fullscreen_btn') and hasattr(self, 'candle_plot'):
+            pos = self.candle_plot.mapTo(self, QtCore.QPoint(self.candle_plot.width() - 34, 4))
+            self._fullscreen_btn.move(pos)
+            self._fullscreen_btn.raise_()
             sp = self.window().findChild(StrategyPanel)
             if sp and sp.ichimoku_cb.isChecked():
                 self._update_ichimoku()

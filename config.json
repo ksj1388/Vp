@@ -240,7 +240,8 @@
     },
     "max_positions": 11,
     "max_per_symbol": 1,
-    "auto_live_trade": false
+    "auto_live_trade": false,
+    "chart_bg_color": "#ffffff"
   },
   "star_colors": {
     "BTCUSD.": 2,
@@ -258,6 +259,7 @@
     "AUDUSD.": 2,
     "GBPCHF.": 3,
     "EURGBP.": 2,
-    "EURAUD.": 3
+    "EURAUD.": 3,
+    "GBPAUD.": 3
   }
 }
