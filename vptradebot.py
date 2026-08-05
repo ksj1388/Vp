@@ -4090,6 +4090,18 @@ class ChartWidget(QWidget):
         self.crosshair_label.hide()
         self.candle_plot.addItem(self.crosshair_label, ignoreBounds=True)
 
+        self._is_fullscreen = False
+        self._fullscreen_btn = QPushButton("⛶", self.candle_plot)
+        self._fullscreen_btn.setFixedSize(28, 28)
+        self._fullscreen_btn.setToolTip("Toggle Fullscreen")
+        self._fullscreen_btn.setStyleSheet(
+            "QPushButton{background:rgba(26,27,38,120);color:#565f89;border:1px solid rgba(41,46,66,80);"
+            "border-radius:6px;font-size:16px;padding:2px}"
+            "QPushButton:hover{background:rgba(41,46,66,200);color:#7aa2f7;border-color:#7aa2f7}"
+        )
+        self._fullscreen_btn.clicked.connect(self._toggle_fullscreen)
+        self._fullscreen_btn.raise_()
+
         self._trade_lines_setup()
         self._ichimoku_indicator = IchimokuCloudIndicator(self.candle_plot)
         self._ma_indicator = MAIndicator(self.candle_plot)
@@ -5680,8 +5692,35 @@ class ChartWidget(QWidget):
             self._save_bg_color(hex_c)
             self.btn_bg_color.setStyleSheet(
                 f"QPushButton{{background:#24283b;border:1px solid #292e42;border-radius:6px;font-size:16px;color:{hex_c};padding:2px}}"
-                "QPushButton:hover{background:#292e42;border-color:#7aa2f7}"
             )
+
+    def _toggle_fullscreen(self):
+        mw = self.window()
+        if not mw or not hasattr(mw, 'middle_splitter'):
+            return
+        self._is_fullscreen = not self._is_fullscreen
+        ms = mw.middle_splitter
+        vs = mw.main_splitter
+        if self._is_fullscreen:
+            self._saved_sizes = ms.sizes()
+            self._saved_vsize = vs.sizes()
+            ms.setSizes([0, 1, 0])
+            vs.setSizes([1, 0])
+            self._fullscreen_btn.setText("⛶")
+            self._fullscreen_btn.setToolTip("Exit Fullscreen")
+        else:
+            if hasattr(self, '_saved_sizes'):
+                ms.setSizes(self._saved_sizes)
+            if hasattr(self, '_saved_vsize'):
+                vs.setSizes(self._saved_vsize)
+            self._fullscreen_btn.setText("⛶")
+            self._fullscreen_btn.setToolTip("Toggle Fullscreen")
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, '_fullscreen_btn'):
+            w = self.candle_plot.width()
+            self._fullscreen_btn.move(w - 34, 4)
             sp = self.window().findChild(StrategyPanel)
             if sp and sp.ichimoku_cb.isChecked():
                 self._update_ichimoku()
