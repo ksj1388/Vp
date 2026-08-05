@@ -6,8 +6,8 @@
     "AUDCHF."
   ],
   "settings": {
-    "last_symbol": "AUDUSD.",
-    "last_tf": "M1",
+    "last_symbol": "BTCUSD.",
+    "last_tf": "M3",
     "risk_mode": 1,
     "risk_value": 7.0,
     "rr": 3.0,
@@ -241,25 +241,26 @@
     "max_positions": 11,
     "max_per_symbol": 1,
     "auto_live_trade": false,
-    "chart_bg_color": "#ffffff"
+    "chart_bg_color": "#ffffff",
+    "panel_sizes": {
+      "middle": [
+        0,
+        1360,
+        0
+      ],
+      "main": [
+        634,
+        0
+      ]
+    },
+    "chart_mode": "candle"
   },
   "star_colors": {
-    "BTCUSD.": 2,
-    "BNBUSD.": 2,
-    "BRNUSD.": 3,
-    "USDJPY.": 3,
-    "XAUUSD.": 2,
-    "NZDUSD.": 3,
-    "AUDJPY.": 3,
-    "EURUSD.": 2,
     "GBPJPY.": 3,
-    "GBPCAD.": 2,
-    "GBPUSD.": 2,
-    "USDCHF.": 3,
-    "AUDUSD.": 2,
-    "GBPCHF.": 3,
-    "EURGBP.": 2,
     "EURAUD.": 3,
-    "GBPAUD.": 3
+    "GBPAUD.": 3,
+    "GBPCHF.": 3,
+    "USDJPY.": 3,
+    "BRNUSD.": 3
   }
 }
