@@ -250,6 +250,8 @@
     "EURCAD.": 2,
     "EURGBP.": 2,
     "AUDCHF.": 2,
-    "BNBUSD.": 2
+    "BNBUSD.": 2,
+    "GBPUSD.": 2,
+    "GBPAUD.": 3
   }
 }

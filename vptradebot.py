@@ -4996,36 +4996,45 @@ class ChartWidget(QWidget):
             is_bull = close_val >= open_val
             body = abs(close_val - open_val)
             ratio = min(body / box_height, 1.0) if box_height > 0 else 0.5
-            alpha_hi = int(40 + ratio * 80)
-            alpha_lo = int(10 + ratio * 30)
-            mid_val = (high_val + low_val) / 2.0
             if is_bull:
                 r, g, b = 38, 166, 154
                 hex_color = "#26a69a"
-                top_alpha, bot_alpha = alpha_lo, alpha_hi
+                a4 = int(40 + ratio * 80)
+                a3 = int(30 + ratio * 55)
+                a2 = int(20 + ratio * 35)
+                a1 = int(10 + ratio * 20)
+                alphas = [a1, a2, a3, a4]
             else:
                 r, g, b = 239, 83, 80
                 hex_color = "#ef5350"
-                top_alpha, bot_alpha = alpha_hi, alpha_lo
-            rect_top = QtWidgets.QGraphicsRectItem(
-                QtCore.QRectF(x0, mid_val, x1 - x0, high_val - mid_val))
-            rect_top.setBrush(pg.mkBrush(r, g, b, top_alpha))
-            rect_top.setPen(pg.mkPen(hex_color, width=1, style=QtCore.Qt.DashLine))
-            rect_top.setZValue(2)
-            self.candle_plot.addItem(rect_top)
-            self._yesterday_candle_items.append(rect_top)
-            rect_bot = QtWidgets.QGraphicsRectItem(
-                QtCore.QRectF(x0, low_val, x1 - x0, mid_val - low_val))
-            rect_bot.setBrush(pg.mkBrush(r, g, b, bot_alpha))
-            rect_bot.setPen(pg.mkPen(hex_color, width=1, style=QtCore.Qt.DashLine))
-            rect_bot.setZValue(2)
-            self.candle_plot.addItem(rect_bot)
-            self._yesterday_candle_items.append(rect_bot)
-            mid_line = pg.PlotDataItem([x0, x1], [mid_val, mid_val],
-                                       pen=pg.mkPen(hex_color, width=2, style=QtCore.Qt.DashDotLine))
-            mid_line.setZValue(3)
-            self.candle_plot.addItem(mid_line)
-            self._yesterday_candle_items.append(mid_line)
+                a4 = int(40 + ratio * 80)
+                a3 = int(30 + ratio * 55)
+                a2 = int(20 + ratio * 35)
+                a1 = int(10 + ratio * 20)
+                alphas = [a4, a3, a2, a1]
+            q1 = low_val + box_height * 0.25
+            q2 = low_val + box_height * 0.50
+            q3 = low_val + box_height * 0.75
+            zones = [
+                (low_val, q1, alphas[0]),
+                (q1, q2, alphas[1]),
+                (q2, q3, alphas[2]),
+                (q3, high_val, alphas[3]),
+            ]
+            for z_bot, z_top, z_alpha in zones:
+                rect = QtWidgets.QGraphicsRectItem(
+                    QtCore.QRectF(x0, z_bot, x1 - x0, z_top - z_bot))
+                rect.setBrush(pg.mkBrush(r, g, b, z_alpha))
+                rect.setPen(pg.mkPen(hex_color, width=1, style=QtCore.Qt.DashLine))
+                rect.setZValue(2)
+                self.candle_plot.addItem(rect)
+                self._yesterday_candle_items.append(rect)
+            for qy, qlbl in [(q1, "25%"), (q2, "50%"), (q3, "75%")]:
+                q_line = pg.PlotDataItem([x0, x1], [qy, qy],
+                                        pen=pg.mkPen(hex_color, width=1, style=QtCore.Qt.DotLine))
+                q_line.setZValue(3)
+                self.candle_plot.addItem(q_line)
+                self._yesterday_candle_items.append(q_line)
             import pyqtgraph as _pg
             hi_lbl = _pg.TextItem(f"YD HIGH  {high_val:.5f}", color=hex_color, anchor=(0, 1))
             hi_lbl.setFont(_pg.QtGui.QFont("Arial", 9, _pg.QtGui.QFont.Bold))
@@ -5033,9 +5042,9 @@ class ChartWidget(QWidget):
             lo_lbl = _pg.TextItem(f"YD LOW  {low_val:.5f}", color=hex_color, anchor=(0, 0))
             lo_lbl.setFont(_pg.QtGui.QFont("Arial", 9, _pg.QtGui.QFont.Bold))
             lo_lbl.setPos(x0, low_val)
-            mid_lbl = _pg.TextItem(f"YD 50%  {mid_val:.5f}", color=hex_color, anchor=(0, 0.5))
+            mid_lbl = _pg.TextItem(f"YD 50%  {q2:.5f}", color=hex_color, anchor=(0, 0.5))
             mid_lbl.setFont(_pg.QtGui.QFont("Arial", 9, _pg.QtGui.QFont.Bold))
-            mid_lbl.setPos(x0, mid_val)
+            mid_lbl.setPos(x0, q2)
             self.candle_plot.addItem(hi_lbl)
             self.candle_plot.addItem(lo_lbl)
             self.candle_plot.addItem(mid_lbl)
