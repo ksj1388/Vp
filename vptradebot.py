@@ -4116,8 +4116,12 @@ class ChartWidget(QWidget):
         self.sl_line = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen("#f7768e", width=1.5, style=Qt.DashLine))
         self.tp_line = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen("#7aa2f7", width=1.5, style=Qt.DashLine))
         self.tp1_line = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen("#3cb371", width=1, style=Qt.DashLine))
-        self.real_sl_line = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen("#ff9e64", width=2, style=Qt.DotLine))
+        self.real_sl_line = pg.PlotDataItem(pen=pg.mkPen("#ff9e64", width=3, style=QtCore.Qt.SolidLine))
         self.real_sl_label = pg.TextItem("REAL SL", color="#ff9e64", anchor=(0, 1))
+        self._real_sl_blink = True
+        self._real_sl_blink_timer = QTimer()
+        self._real_sl_blink_timer.timeout.connect(self._blink_real_sl)
+        self._real_sl_blink_timer.start(500)
         self.entry_label = pg.TextItem("Entry", anchor=(0, 1), color="#9ece6a")
         self.sl_label = pg.TextItem("SL", anchor=(0, 1), color="#f7768e")
         self.tp_label = pg.TextItem("TP", anchor=(0, 1), color="#7aa2f7")
@@ -6550,10 +6554,16 @@ class ChartWidget(QWidget):
                 self.real_sl_label.hide()
                 return
             n = len(self.data_df) if self.data_df is not None else 0
+            if n < 2:
+                self.real_sl_line.hide()
+                self.real_sl_label.hide()
+                return
             info = _mt5.symbol_info(sym)
             digs = info.digits if info else 5
             fmt = f".{digs}f"
-            self.real_sl_line.setValue(pos.sl)
+            x0 = -0.5
+            x1 = float(n) - 0.5
+            self.real_sl_line.setData([x0, x1], [pos.sl, pos.sl])
             self.real_sl_line.show()
             side = "BUY" if pos.type == _mt5.ORDER_TYPE_BUY else "SELL"
             self.real_sl_label.setText(f"REAL SL {pos.sl:{fmt}} ({side})")
@@ -6562,6 +6572,16 @@ class ChartWidget(QWidget):
         except Exception:
             self.real_sl_line.hide()
             self.real_sl_label.hide()
+
+    def _blink_real_sl(self):
+        self._real_sl_blink = not self._real_sl_blink
+        if self.real_sl_line.isVisible():
+            if self._real_sl_blink:
+                self.real_sl_line.setPen(pg.mkPen("#ff9e64", width=3, style=QtCore.Qt.SolidLine))
+                self.real_sl_label.setColor("#ff9e64")
+            else:
+                self.real_sl_line.setPen(pg.mkPen("#ff9e64", width=1, style=QtCore.Qt.SolidLine))
+                self.real_sl_label.setColor("#ff9e6480")
 
 # ============================================================
 #                   پنل اطلاعات اکانت
