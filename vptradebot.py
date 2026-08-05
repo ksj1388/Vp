@@ -904,7 +904,15 @@ class MT5Executor:
         if not position:
             return None, "Position not found"
         pos = position[0]
-        vol = min(volume, pos.volume)
+        info = mt5.symbol_info(pos.symbol)
+        if info:
+            vs = info.volume_step if info.volume_step > 0 else 0.01
+            vol_min = info.volume_min if info.volume_min > 0 else 0.01
+        else:
+            vs = 0.01
+            vol_min = 0.01
+        vol = round(volume / vs) * vs
+        vol = max(vol_min, min(vol, pos.volume))
         if vol <= 0:
             return None, "Invalid volume"
         tick = mt5.symbol_info_tick(pos.symbol)
@@ -1178,6 +1186,12 @@ class ExitManager:
                     if pos.sl and pos.sl > 0:
                         fixed_sl_dist = abs(pos.price_open - pos.sl)
                         cache["tp_sl_dist"] = fixed_sl_dist
+                    else:
+                        tick_info = mt5.symbol_info_tick(symbol)
+                        if tick_info:
+                            spread = abs(tick_info.ask - tick_info.bid)
+                            fixed_sl_dist = spread * 5 if spread > 0 else pip_size * 50
+                            cache["tp_sl_dist"] = fixed_sl_dist
                 for i, level in enumerate(self.tp_levels):
                     if i in cache["tp_hit"]:
                         continue
