@@ -4116,7 +4116,7 @@ class ChartWidget(QWidget):
         self.sl_line = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen("#f7768e", width=1.5, style=Qt.DashLine))
         self.tp_line = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen("#7aa2f7", width=1.5, style=Qt.DashLine))
         self.tp1_line = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen("#3cb371", width=1, style=Qt.DashLine))
-        self.real_sl_line = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen("#ff9e64", width=3, style=QtCore.Qt.SolidLine))
+        self.real_sl_line = pg.PlotDataItem(pen=pg.mkPen("#ff9e64", width=3, style=QtCore.Qt.SolidLine))
         self.real_sl_label = pg.TextItem("REAL SL", color="#ff9e64", anchor=(0, 1))
         self._real_sl_blink = True
         self._real_sl_blink_timer = QTimer()
@@ -6553,14 +6553,26 @@ class ChartWidget(QWidget):
                 self.real_sl_line.hide()
                 self.real_sl_label.hide()
                 return
+            n = len(self.data_df) if self.data_df is not None else 0
+            if n < 2:
+                self.real_sl_line.hide()
+                self.real_sl_label.hide()
+                return
+            pos_sec = int(pos.time)
+            x_start = 0
+            for i in range(n - 1, -1, -1):
+                if self._raw_times[i] <= pos_sec:
+                    x_start = i
+                    break
+            x_end = n - 1
             info = _mt5.symbol_info(sym)
             digs = info.digits if info else 5
             fmt = f".{digs}f"
-            self.real_sl_line.setPos(pos.sl)
+            self.real_sl_line.setData([x_start, x_end], [pos.sl, pos.sl])
             self.real_sl_line.show()
             side = "BUY" if pos.type == _mt5.ORDER_TYPE_BUY else "SELL"
             self.real_sl_label.setText(f"REAL SL {pos.sl:{fmt}} ({side})")
-            self.real_sl_label.setPos(self._get_label_x(), pos.sl)
+            self.real_sl_label.setPos(x_start, pos.sl)
             self.real_sl_label.show()
         except Exception:
             self.real_sl_line.hide()
