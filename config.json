@@ -263,6 +263,9 @@
     "USDJPY.": 3,
     "BRNUSD.": 3,
     "EURUSD.": 2,
-    "USDCHF.": 3
+    "USDCHF.": 3,
+    "AUDUSD.": 2,
+    "EURGBP.": 2,
+    "GBPUSD.": 2
   }
 }

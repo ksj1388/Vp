@@ -5739,14 +5739,17 @@ class ChartWidget(QWidget):
             sp.show()
             wp.show()
             bt.show()
-            if hasattr(self, '_saved_sizes'):
-                ms.setSizes(self._saved_sizes)
-            if hasattr(self, '_saved_vsize'):
-                vs.setSizes(self._saved_vsize)
             if hasattr(self, '_saved_geom'):
                 mw.restoreGeometry(self._saved_geom)
-            else:
                 mw.showNormal()
+            saved_s = getattr(self, '_saved_sizes', None)
+            saved_v = getattr(self, '_saved_vsize', None)
+            def _restore_splitters():
+                if saved_s:
+                    ms.setSizes(saved_s)
+                if saved_v:
+                    vs.setSizes(saved_v)
+            QtCore.QTimer.singleShot(50, _restore_splitters)
             self._fullscreen_btn.setText("⛶")
             self._fullscreen_btn.setToolTip("Toggle Fullscreen")
 
