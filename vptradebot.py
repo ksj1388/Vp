@@ -6561,11 +6561,7 @@ class ChartWidget(QWidget):
             info = _mt5.symbol_info(sym)
             digs = info.digits if info else 5
             fmt = f".{digs}f"
-            vb = self.candle_plot.plotItem.vb
-            vr = vb.viewRect()
-            x0 = vr.left() if vr else 0.0
-            x1 = vr.right() if vr else float(n)
-            self.real_sl_line.setData([x0, x1], [pos.sl, pos.sl])
+            self.real_sl_line.setData([0.0, float(n) - 1.0], [pos.sl, pos.sl])
             self.real_sl_line.show()
             side = "BUY" if pos.type == _mt5.ORDER_TYPE_BUY else "SELL"
             self.real_sl_label.setText(f"REAL SL {pos.sl:{fmt}} ({side})")
