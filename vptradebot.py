@@ -4116,6 +4116,8 @@ class ChartWidget(QWidget):
         self.sl_line = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen("#f7768e", width=1.5, style=Qt.DashLine))
         self.tp_line = pg.InfiniteLine(angle=0, movable=True, pen=pg.mkPen("#7aa2f7", width=1.5, style=Qt.DashLine))
         self.tp1_line = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen("#3cb371", width=1, style=Qt.DashLine))
+        self.real_sl_line = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen("#ff9e64", width=2, style=Qt.DotLine))
+        self.real_sl_label = pg.TextItem("REAL SL", color="#ff9e64", anchor=(0, 1))
         self.entry_label = pg.TextItem("Entry", anchor=(0, 1), color="#9ece6a")
         self.sl_label = pg.TextItem("SL", anchor=(0, 1), color="#f7768e")
         self.tp_label = pg.TextItem("TP", anchor=(0, 1), color="#7aa2f7")
@@ -4124,6 +4126,8 @@ class ChartWidget(QWidget):
         self.sl_line.hide()
         self.tp_line.hide()
         self.tp1_line.hide()
+        self.real_sl_line.hide()
+        self.real_sl_label.hide()
         self.entry_label.hide()
         self.sl_label.hide()
         self.tp_label.hide()
@@ -4132,6 +4136,8 @@ class ChartWidget(QWidget):
         self.candle_plot.addItem(self.sl_line, ignoreBounds=True)
         self.candle_plot.addItem(self.tp_line, ignoreBounds=True)
         self.candle_plot.addItem(self.tp1_line, ignoreBounds=True)
+        self.candle_plot.addItem(self.real_sl_line, ignoreBounds=True)
+        self.candle_plot.addItem(self.real_sl_label, ignoreBounds=True)
         self.candle_plot.addItem(self.entry_label, ignoreBounds=True)
         self.candle_plot.addItem(self.sl_label, ignoreBounds=True)
         self.candle_plot.addItem(self.tp_label, ignoreBounds=True)
@@ -6520,6 +6526,42 @@ class ChartWidget(QWidget):
                 self.exit_mgr.time_exit_enabled = cfg["time_exit_enabled"]
                 self.exit_mgr.time_exit_minutes = cfg["time_exit_minutes"]
             self.exit_mgr.process_positions()
+        try:
+            self._update_real_sl_marker()
+        except Exception:
+            pass
+
+    def _update_real_sl_marker(self):
+        try:
+            import MetaTrader5 as _mt5
+            positions = _mt5.positions_get()
+            if not positions:
+                self.real_sl_line.hide()
+                self.real_sl_label.hide()
+                return
+            sym = self.current_symbol
+            pos = None
+            for p in positions:
+                if p.symbol == sym:
+                    pos = p
+                    break
+            if pos is None or not pos.sl or pos.sl <= 0:
+                self.real_sl_line.hide()
+                self.real_sl_label.hide()
+                return
+            n = len(self.data_df) if self.data_df is not None else 0
+            info = _mt5.symbol_info(sym)
+            digs = info.digits if info else 5
+            fmt = f".{digs}f"
+            self.real_sl_line.setValue(pos.sl)
+            self.real_sl_line.show()
+            side = "BUY" if pos.type == _mt5.ORDER_TYPE_BUY else "SELL"
+            self.real_sl_label.setText(f"REAL SL {pos.sl:{fmt}} ({side})")
+            self.real_sl_label.setPos(self._get_label_x(), pos.sl)
+            self.real_sl_label.show()
+        except Exception:
+            self.real_sl_line.hide()
+            self.real_sl_label.hide()
 
 # ============================================================
 #                   پنل اطلاعات اکانت
