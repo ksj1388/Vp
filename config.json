@@ -245,7 +245,7 @@
     "panel_sizes": {
       "middle": [
         0,
-        1360,
+        1516,
         0
       ],
       "main": [
@@ -261,6 +261,8 @@
     "GBPAUD.": 3,
     "GBPCHF.": 3,
     "USDJPY.": 3,
-    "BRNUSD.": 3
+    "BRNUSD.": 3,
+    "EURUSD.": 2,
+    "USDCHF.": 3
   }
 }

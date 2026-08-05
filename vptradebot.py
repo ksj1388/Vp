@@ -5726,24 +5726,27 @@ class ChartWidget(QWidget):
         wp = mw.watchlist_panel
         bt = mw.bottom_tabs
         if self._is_fullscreen:
+            self._saved_geom = mw.saveGeometry()
             self._saved_sizes = ms.sizes()
             self._saved_vsize = vs.sizes()
-            self._saved_sp = sp.isVisible()
-            self._saved_wp = wp.isVisible()
-            self._saved_bt = bt.isVisible()
             sp.hide()
             wp.hide()
             bt.hide()
+            mw.showMaximized()
             self._fullscreen_btn.setText("⛶")
             self._fullscreen_btn.setToolTip("Exit Fullscreen")
         else:
-            sp.setVisible(self._saved_sp)
-            wp.setVisible(self._saved_wp)
-            bt.setVisible(self._saved_bt)
+            sp.show()
+            wp.show()
+            bt.show()
             if hasattr(self, '_saved_sizes'):
                 ms.setSizes(self._saved_sizes)
             if hasattr(self, '_saved_vsize'):
                 vs.setSizes(self._saved_vsize)
+            if hasattr(self, '_saved_geom'):
+                mw.restoreGeometry(self._saved_geom)
+            else:
+                mw.showNormal()
             self._fullscreen_btn.setText("⛶")
             self._fullscreen_btn.setToolTip("Toggle Fullscreen")
 
