@@ -145,7 +145,7 @@
       "levelNum": 100,
       "levelWidth": 50
     },
-    "vwap_enabled": true,
+    "vwap_enabled": false,
     "vwap_cfg": {
       "use_ses": false,
       "use_wk": false,
@@ -243,7 +243,7 @@
     "auto_live_trade": false
   },
   "star_colors": {
-    "XAUUSD.": 7,
+    "XAUUSD.": 2,
     "EURUSD.": 2,
     "AUDCAD.": 2,
     "EURAUD.": 3,

@@ -4996,35 +4996,42 @@ class ChartWidget(QWidget):
             is_bull = close_val >= open_val
             body = abs(close_val - open_val)
             ratio = min(body / box_height, 1.0) if box_height > 0 else 0.5
+            g_r, g_g, g_b = 38, 166, 154
+            r_r, r_g, r_b = 239, 83, 80
             if is_bull:
-                r, g, b = 38, 166, 154
                 hex_color = "#26a69a"
-                a4 = int(40 + ratio * 80)
-                a3 = int(30 + ratio * 55)
-                a2 = int(20 + ratio * 35)
-                a1 = int(10 + ratio * 20)
-                alphas = [a1, a2, a3, a4]
             else:
-                r, g, b = 239, 83, 80
                 hex_color = "#ef5350"
-                a4 = int(40 + ratio * 80)
-                a3 = int(30 + ratio * 55)
-                a2 = int(20 + ratio * 35)
-                a1 = int(10 + ratio * 20)
-                alphas = [a4, a3, a2, a1]
+            base_alpha = int(40 + ratio * 80)
             q1 = low_val + box_height * 0.25
             q2 = low_val + box_height * 0.50
             q3 = low_val + box_height * 0.75
+            if is_bull:
+                colors = [
+                    (g_r, g_g, g_b),
+                    (int(g_r * 0.75 + r_r * 0.25), int(g_g * 0.75 + r_g * 0.25), int(g_b * 0.75 + r_b * 0.25)),
+                    (int(g_r * 0.50 + r_r * 0.50), int(g_g * 0.50 + r_g * 0.50), int(g_b * 0.50 + r_b * 0.50)),
+                    (int(g_r * 0.25 + r_r * 0.75), int(g_g * 0.25 + r_g * 0.75), int(g_b * 0.25 + r_b * 0.75)),
+                ]
+                alphas = [base_alpha, int(base_alpha * 0.80), int(base_alpha * 0.60), int(base_alpha * 0.40)]
+            else:
+                colors = [
+                    (int(r_r * 0.25 + g_r * 0.75), int(r_g * 0.25 + g_g * 0.75), int(r_b * 0.25 + g_b * 0.75)),
+                    (int(r_r * 0.50 + g_r * 0.50), int(r_g * 0.50 + g_g * 0.50), int(r_b * 0.50 + g_b * 0.50)),
+                    (int(r_r * 0.75 + g_r * 0.25), int(r_g * 0.75 + g_g * 0.25), int(r_b * 0.75 + g_b * 0.25)),
+                    (r_r, r_g, r_b),
+                ]
+                alphas = [int(base_alpha * 0.40), int(base_alpha * 0.60), int(base_alpha * 0.80), base_alpha]
             zones = [
-                (low_val, q1, alphas[0]),
-                (q1, q2, alphas[1]),
-                (q2, q3, alphas[2]),
-                (q3, high_val, alphas[3]),
+                (low_val, q1, colors[0], alphas[0]),
+                (q1, q2, colors[1], alphas[1]),
+                (q2, q3, colors[2], alphas[2]),
+                (q3, high_val, colors[3], alphas[3]),
             ]
-            for z_bot, z_top, z_alpha in zones:
+            for z_bot, z_top, z_col, z_alpha in zones:
                 rect = QtWidgets.QGraphicsRectItem(
                     QtCore.QRectF(x0, z_bot, x1 - x0, z_top - z_bot))
-                rect.setBrush(pg.mkBrush(r, g, b, z_alpha))
+                rect.setBrush(pg.mkBrush(z_col[0], z_col[1], z_col[2], z_alpha))
                 rect.setPen(pg.mkPen(hex_color, width=1, style=QtCore.Qt.DashLine))
                 rect.setZValue(2)
                 self.candle_plot.addItem(rect)
