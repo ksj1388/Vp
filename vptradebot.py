@@ -9257,6 +9257,8 @@ class WatchlistPanel(QFrame):
 # ============================================================
 
 class PositionsPanel(QFrame):
+    symbol_clicked = QtCore.pyqtSignal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._cards = []
@@ -9408,7 +9410,12 @@ class PositionsPanel(QFrame):
                 border-radius: 6px;
                 padding: 4px;
             }}
+            QFrame:hover {{
+                border: 1px solid #292e42;
+            }}
         """)
+        card.setCursor(QtGui.QCursor(QtCore.Qt.PointingHandCursor))
+        card.mousePressEvent = lambda e, s=pos.symbol: self.symbol_clicked.emit(s)
 
         main_v = QVBoxLayout(card)
         main_v.setContentsMargins(8, 6, 8, 6)
@@ -9850,6 +9857,7 @@ class MainWindow(QMainWindow):
             QTabBar::tab:hover{background:#1e2030}
         """)
         self.positions_panel = PositionsPanel()
+        self.positions_panel.symbol_clicked.connect(self._on_pos_symbol_clicked)
         self.orders_panel = OrdersPanel()
         self.log_panel = LogPanel()
         self.signals_panel = SignalsPanel()
@@ -10008,6 +10016,13 @@ class MainWindow(QMainWindow):
             self.chart_widget.set_symbol(symbol)
         except Exception as e:
             Logger.error(f"Signal symbol click error: {e}")
+
+    def _on_pos_symbol_clicked(self, symbol):
+        try:
+            Logger.info(f"[POS] Switching chart to {symbol}")
+            self.chart_widget.set_symbol(symbol)
+        except Exception as e:
+            Logger.error(f"Position symbol click error: {e}")
 
     def _connect_trade_callbacks(self):
         cb = self.account_panel.refresh
