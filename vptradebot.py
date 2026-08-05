@@ -3879,7 +3879,6 @@ class ChartWidget(QWidget):
         self._last_signal_score = 0.0
 
         self._pos_lines = []
-        self._pos_sl_cache = {}  # ticket -> sl_distance (original)
         self._trendline_mode = False
         self._trendline_points = []
         self._trendline_items = []
@@ -5882,8 +5881,6 @@ class ChartWidget(QWidget):
                     "volume": pos.volume, "x_start": x_start, "x_end": n - 1,
                     "symbol": pos.symbol, "digits": info.digits if info else 5,
                 })
-                if sl and sl > 0 and pos.ticket not in self._pos_sl_cache:
-                    self._pos_sl_cache[pos.ticket] = abs(entry - sl)
 
         orders = mt5.orders_get()
         if orders:
@@ -5915,9 +5912,6 @@ class ChartWidget(QWidget):
                     "entry": entry, "sl": sl, "tp": tp,
                     "volume": o.volume_current, "x_start": x_start, "x_end": n - 1,
                 })
-
-        active_pos_tickets = {item["ticket"] for item in items_to_draw if item["type"] == "POS"}
-        self._pos_sl_cache = {t: d for t, d in self._pos_sl_cache.items() if t in active_pos_tickets}
 
         for item in items_to_draw:
             entry = item["entry"]
@@ -6036,14 +6030,10 @@ class ChartWidget(QWidget):
                     self._pos_lines.append(sl_rect)
 
                 if tp and tp > 0:
-                    cached_sl_dist = self._pos_sl_cache.get(item["ticket"])
-                    if cached_sl_dist and cached_sl_dist > 0:
-                        sl_dist_pos = cached_sl_dist
-                    else:
-                        sl_dist_pos = abs(entry - sl) if sl and sl > 0 else abs(tp - entry)
-                        self._pos_sl_cache[item["ticket"]] = sl_dist_pos
-                    tp_ratio_pos = abs(tp - entry) / sl_dist_pos if sl_dist_pos > 0 else 0
-                    ratios_pos = [r for r in self._get_tp_levels_from_config() if r <= tp_ratio_pos]
+                    tp_dist = abs(tp - entry)
+                    tp_ratio_pos = 1.0
+                    ratios_pos = self._get_tp_levels_from_config()
+                    ratios_pos = [r for r in ratios_pos if r <= tp_ratio_pos]
                     is_buy_pos = item["side_txt"] == "BUY"
                     all_zone_prices_pos = []
                     all_zone_names_pos = []
@@ -6055,18 +6045,17 @@ class ChartWidget(QWidget):
                         (80, 230, 140, 45),
                     ]
                     zone_pen_colors = ["#00E676", "#00C853", "#00C853", "#69F0AE", "#B9F6CA"]
+                    tp50_p = entry + tp_dist * 0.5 if is_buy_pos else entry - tp_dist * 0.5
+                    all_zone_prices_pos.append(round(tp50_p, 5))
+                    all_zone_names_pos.append("TP50%")
                     if ratios_pos:
-                        tp50_p = entry + sl_dist_pos * 0.5 if is_buy_pos else entry - sl_dist_pos * 0.5
-                        all_zone_prices_pos.append(round(tp50_p, 5))
-                        all_zone_names_pos.append("TP50%")
                         for i, r in enumerate(ratios_pos):
-                            p = entry + sl_dist_pos * r if is_buy_pos else entry - sl_dist_pos * r
+                            p = entry + tp_dist * r if is_buy_pos else entry - tp_dist * r
                             all_zone_prices_pos.append(round(p, 5))
                             all_zone_names_pos.append(f"TP{i+1}")
                     else:
-                        tp50_p = entry + (tp - entry) * 0.5 if is_buy_pos else entry - (entry - tp) * 0.5
-                        all_zone_prices_pos = [round(tp50_p, 5), round(tp, 5)]
-                        all_zone_names_pos = ["TP50%", "TP1"]
+                        all_zone_prices_pos.append(round(tp, 5))
+                        all_zone_names_pos.append("TP1")
                     n_zones = min(len(all_zone_prices_pos), len(zone_colors_rgba))
                     prev = entry
                     for i in range(n_zones):
